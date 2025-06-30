@@ -1,0 +1,182 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>POS Tokoku</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9fafb;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #0d9488;
+    }
+    .form-group {
+      margin: 10px 0;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      margin-bottom: 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 8px 12px;
+      background-color: #0d9488;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #reader {
+      margin: 10px auto;
+      width: 300px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background-color: white;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #e2e8f0;
+    }
+    .edit-btn {
+      background-color: #facc15;
+    }
+    .delete-btn {
+      background-color: #ef4444;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>📦 POS Tokoku</h1>
+
+  <div id="reader"></div>
+
+  <div class="form-group">
+    <label for="kode">Kode Barang</label>
+    <input type="text" id="kode" placeholder="Scan atau ketik kode barang">
+  </div>
+  <div class="form-group">
+    <label for="nama">Nama Barang</label>
+    <input type="text" id="nama" placeholder="Nama barang">
+  </div>
+  <div class="form-group">
+    <label for="harga">Harga Barang</label>
+    <input type="number" id="harga" placeholder="Harga satuan">
+  </div>
+  <div class="form-group">
+    <label for="jumlah">Jumlah Barang</label>
+    <input type="number" id="jumlah" placeholder="Jumlah">
+  </div>
+  <button onclick="tambahTransaksi()">➕ Tambah Transaksi</button>
+
+  <table id="transactionTable">
+    <thead>
+      <tr>
+        <th>Kode</th>
+        <th>Nama</th>
+        <th>Harga</th>
+        <th>Jumlah</th>
+        <th>Total</th>
+        <th>Opsi</th>
+      </tr>
+    </thead>
+    <tbody id="transactionBody"></tbody>
+  </table>
+
+  <script>
+    const data = [];
+
+    function renderTable() {
+      const tbody = document.getElementById("transactionBody");
+      tbody.innerHTML = "";
+      data.forEach((item, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = \`
+          <td>\${item.kode}</td>
+          <td>\${item.nama}</td>
+          <td>Rp \${item.harga.toLocaleString()}</td>
+          <td>\${item.jumlah}</td>
+          <td>Rp \${(item.harga * item.jumlah).toLocaleString()}</td>
+          <td>
+            <button class="edit-btn" onclick="editItem(\${index})">Edit</button>
+            <button class="delete-btn" onclick="deleteItem(\${index})">Hapus</button>
+          </td>
+        \`;
+        tbody.appendChild(row);
+      });
+    }
+
+    function tambahTransaksi() {
+      const kode = document.getElementById("kode").value;
+      const nama = document.getElementById("nama").value;
+      const harga = parseInt(document.getElementById("harga").value);
+      const jumlah = parseInt(document.getElementById("jumlah").value);
+
+      if (!kode || !nama || isNaN(harga) || isNaN(jumlah)) {
+        alert("Mohon lengkapi semua inputan!");
+        return;
+      }
+
+      data.push({ kode, nama, harga, jumlah });
+      renderTable();
+
+      // Reset input
+      document.getElementById("kode").value = "";
+      document.getElementById("nama").value = "";
+      document.getElementById("harga").value = "";
+      document.getElementById("jumlah").value = "";
+    }
+
+    function deleteItem(index) {
+      if (confirm("Hapus transaksi ini?")) {
+        data.splice(index, 1);
+        renderTable();
+      }
+    }
+
+    function editItem(index) {
+      const item = data[index];
+      const newJumlah = prompt("Jumlah baru:", item.jumlah);
+      const newHarga = prompt("Harga baru:", item.harga);
+      if (newJumlah !== null && newHarga !== null) {
+        item.jumlah = parseInt(newJumlah);
+        item.harga = parseInt(newHarga);
+        renderTable();
+      }
+    }
+
+    const qr = new Html5Qrcode("reader");
+    qr.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+      qrCodeMessage => {
+        document.getElementById("kode").value = qrCodeMessage;
+      },
+      error => {}
+    ).catch(err => {
+      alert("Kamera gagal diakses: " + err);
+    });
+  </script>
+</body>
+</html>
