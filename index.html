@@ -1,0 +1,103 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>POS QR Lengkap</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+    input, button { width: 100%; padding: 10px; margin: 6px 0; font-size: 1em; }
+    #reader { width: 100%; max-width: 400px; margin: auto; }
+    ul { padding-left: 0; list-style: none; }
+    li { border: 1px solid #ccc; margin: 4px 0; padding: 8px; border-radius: 4px; }
+  </style>
+
+  <link rel="manifest" href="manifest.json">
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').then(function() {
+        console.log('Service Worker Registered');
+      });
+    }
+  </script>
+  </head>
+  
+<body>
+  <h1>POS QR - Transaksi + Rekap</h1>
+  <div id="reader"></div>
+  <button onclick="startScanner()">Scan QR Code</button>
+  <input type="text" id="barcode" placeholder="Barcode hasil scan" readonly />
+  <input type="number" id="price" placeholder="Harga jual" />
+  <input type="number" id="quantity" placeholder="Jumlah" value="1" />
+  <button onclick="addTransaction()">Tambah Transaksi</button>
+  <button onclick="exportCSV()">Export ke CSV</button>
+
+  <h2>Riwayat Transaksi</h2>
+  <ul id="transactionList"></ul>
+  <h3 id="total">Total Hari Ini: Rp0</h3>
+
+  <script>
+    const transactions = JSON.parse(localStorage.getItem("transactions") || "[]");
+    function saveTransactions() {
+      localStorage.setItem("transactions", JSON.stringify(transactions));
+    }
+
+    function startScanner() {
+      const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+      scanner.render((decodedText) => {
+        document.getElementById("barcode").value = decodedText;
+        scanner.clear();
+      }, (err) => console.warn(err));
+    }
+
+    function addTransaction() {
+      const barcode = document.getElementById("barcode").value;
+      const price = parseFloat(document.getElementById("price").value);
+      const quantity = parseInt(document.getElementById("quantity").value);
+      if (!barcode || isNaN(price) || isNaN(quantity)) return;
+
+      const date = new Date().toISOString().split("T")[0];
+      const item = { date, barcode, price, quantity };
+      transactions.push(item);
+      saveTransactions();
+      renderTransactions();
+      document.getElementById("barcode").value = "";
+      document.getElementById("price").value = "";
+      document.getElementById("quantity").value = 1;
+    }
+
+    function renderTransactions() {
+      const list = document.getElementById("transactionList");
+      list.innerHTML = "";
+      const today = new Date().toISOString().split("T")[0];
+      let total = 0;
+      transactions.filter(t => t.date === today).forEach(item => {
+        const subtotal = item.price * item.quantity;
+        total += subtotal;
+        const li = document.createElement("li");
+        li.textContent = `${item.date} - ${item.barcode} - ${item.quantity} x Rp${item.price.toLocaleString()} = Rp${subtotal.toLocaleString()}`;
+        list.appendChild(li);
+      });
+      document.getElementById("total").textContent = "Total Hari Ini: Rp" + total.toLocaleString();
+    }
+
+    function exportCSV() {
+      let csv = "Tanggal,Barcode,Harga,Jumlah,Subtotal\n";
+      transactions.forEach(item => {
+        const subtotal = item.price * item.quantity;
+        csv += `${item.date},${item.barcode},${item.price},${item.quantity},${subtotal}\n`;
+      });
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "rekap_transaksi.csv";
+      a.click();
+    }
+
+    renderTransactions();
+  </script>
+</body>
+</html>
